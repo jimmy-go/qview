@@ -105,7 +105,7 @@ func Handler(h http.Handler) http.Handler {
 			return
 		}
 
-		u, err := cookUser(r, w)
+		u, err := CookUser(r, w)
 		if err != nil {
 			http.Redirect(w, r, loginURL, http.StatusSeeOther)
 			return
@@ -269,7 +269,7 @@ func cookToken(r *http.Request, w http.ResponseWriter) (string, error) {
 	return token, nil
 }
 
-func cookUser(r *http.Request, w http.ResponseWriter) (string, error) {
+func CookUser(r *http.Request, w http.ResponseWriter) (string, error) {
 	sess, err := cstore.Get(r, sessName)
 	if err != nil {
 		return "", err
