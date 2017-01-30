@@ -1,8 +1,10 @@
+
 <div class="login-box">
     <div class="login-logo">
-        <a href="/static/adminlte/index2.html"><b>QRA</b>Checklist</a>
+        {{ template "logo_small.html" .}}
     </div>
     <div class="login-box-body">
+        {{ template "lte/alert_errors.html" .}}
         <p class="login-box-msg">Sign in to start your session</p>
         <form action="/login" method="POST">
             <div class="form-group has-feedback">

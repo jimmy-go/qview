@@ -105,14 +105,14 @@ func Handler(h http.Handler) http.Handler {
 			return
 		}
 
-		token, err := cookToken(r, w)
+		u, err := cookUser(r, w)
 		if err != nil {
 			http.Redirect(w, r, loginURL, http.StatusSeeOther)
 			return
 		}
 
 		ctx := Context{
-			Token: token,
+			Username: u,
 		}
 
 		// validate user has permission to view this URL (view)
@@ -147,14 +147,14 @@ func Login() http.Handler {
 		err := qra.Authenticate(ctx, p, &token)
 		if err != nil {
 			log.Printf("Handler : err [%s]", err)
-			w.WriteHeader(http.StatusUnauthorized)
-			if _, err := fmt.Fprint(w, "unauthorized access"); err != nil {
-				log.Printf("Login : write unauthorized response : err [%s]", err)
+			if e := cookFlashSet(r, w, err); e != nil {
+				log.Printf("Handler : err [%s]", e)
 			}
+			http.Redirect(w, r, loginURL, http.StatusSeeOther)
 			return
 		}
 
-		err = cookSet(r, w, token)
+		err = cookSet(r, w, token, username)
 		if err != nil {
 			log.Printf("Login : cookie store token : err [%s]", err)
 		}
@@ -200,18 +200,61 @@ func Logout() http.Handler {
 	})
 }
 
-func cookSet(r *http.Request, w http.ResponseWriter, token string) error {
+func cookSet(r *http.Request, w http.ResponseWriter, token, u string) error {
 	sess, err := cstore.Get(r, sessName)
 	if err != nil {
 		return err
 	}
 	sess.Values["token"] = token
+	sess.Values["username"] = u
 	// TODO; add expiration date.
 	err = sess.Save(r, w)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func cookFlashSet(r *http.Request, w http.ResponseWriter, er error) error {
+	if er == nil {
+		return errors.New("empty message")
+	}
+
+	sess, err := cstore.Get(r, sessName)
+	if err != nil {
+		return err
+	}
+	sess.AddFlash(fmt.Sprintf("%v", er))
+
+	if err := sess.Save(r, w); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Flash returns temporal flashes.
+// TODO; make better implementation for multiple errors messages or struct.
+func Flash(r *http.Request, w http.ResponseWriter) (string, error) {
+	sess, err := cstore.Get(r, sessName)
+	if err != nil {
+		return "", err
+	}
+
+	fs := sess.Flashes()
+	if len(fs) < 1 {
+		return "", errors.New("no flashes present")
+	}
+	if err := sess.Save(r, w); err != nil {
+		return "", err
+	}
+	s, ok := fs[0].(string)
+	if !ok {
+		return "", errors.New("flash is not string")
+	}
+	if len(s) < 1 {
+		return "", errors.New("flash is not set")
+	}
+	return s, nil
 }
 
 func cookToken(r *http.Request, w http.ResponseWriter) (string, error) {
@@ -224,6 +267,18 @@ func cookToken(r *http.Request, w http.ResponseWriter) (string, error) {
 		return "", errors.New("token session not set")
 	}
 	return token, nil
+}
+
+func cookUser(r *http.Request, w http.ResponseWriter) (string, error) {
+	sess, err := cstore.Get(r, sessName)
+	if err != nil {
+		return "", err
+	}
+	s, ok := sess.Values["username"].(string)
+	if !ok {
+		return "", errors.New("username session not set")
+	}
+	return s, nil
 }
 
 func cookDestroy(r *http.Request, w http.ResponseWriter) error {
