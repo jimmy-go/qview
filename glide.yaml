@@ -1,7 +1,0 @@
-package: github.com/jimmy-go/qview
-# IMPORTANT! ignore qra to prevent unexpected behaviour
-ignore:
-- github.com/jimmy-go/qra
-import:
-- package: github.com/gorilla/sessions
-
