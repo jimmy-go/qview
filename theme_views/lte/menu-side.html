@@ -2,7 +2,7 @@
     <li class="header">MAIN NAVIGATION</li>
     {{if $.menus}}
         {{range $.menus}}
-        <li>
+        <li class="{{.Active}}">
             <a href="{{.Link}}">
                 <i class="{{.Icon}}"></i> <span>{{.Name}}</span>
                 {{if gt .Badge 0}}
